@@ -1,0 +1,483 @@
+/*
+ *  Copyright (c) 2023. Trally Chou (Zhou jiale, in Chinese)
+ *
+ *  This Source Code Form is subject to the terms of the Mozilla Public
+ *  License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ */
+
+package com.trally;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.*;
+
+public class MenuListener implements Listener {
+
+    static YamlConfiguration opState = new YamlConfiguration();
+    static HashMap<String, ItemStack[]> playerInventory = new HashMap<>();
+    static HashMap<String, Inventory> invEditing = new HashMap<>();
+    static HashMap<String, ItemStack> itemEditing = new HashMap<>();
+    static HashMap<String, String> editingMenu = new HashMap<>();
+
+    static HashMap<String, String> openAMenu = new HashMap<>();
+    /*
+     * state:
+     * 0: 无
+     * 1: 打开箱子
+     * 2: 进入编辑模式后
+     */
+
+    /*
+     * editingMode:
+     * -1: 无
+     * 0: 名称工具
+     * 1: lore工具
+     * 2: 尚无
+     * 3: 命令工具
+     * 4: 光标工具
+     * 6: 更改容器名
+     * 7: 设置菜单id
+     */
+
+    @EventHandler
+    public void onOpenAInv(InventoryOpenEvent e) {
+
+        Player p = (Player) e.getPlayer();  //傻逼Bukkit 这还要转
+        if (p.isOp() && opState.getBoolean(p.getName() + ".on")) {
+
+            if (e.getInventory().getHolder() != null) {
+                editingMenu.remove(p.getName());
+                if (opState.getInt(p.getName() + ".editingMode") == 3) {  //防止对普通箱子进行命令编辑
+                    opState.set(p.getName() + ".editingMode", 4);
+                }
+                if (opState.getInt(p.getName() + ".state") == 2) {
+                    p.getInventory().setItem(3, new ItemStack(Material.AIR));
+                    p.getInventory().setItem(7, getAItemNamedAndLored(Material.LEVER, "§r创建为菜单"));
+                }
+
+            }
+
+            if (e.getInventory().getType() != InventoryType.PLAYER && opState.getInt(p.getName() + ".state", 0) == 0) {
+                opState.set(p.getName() + ".state", 1);
+                opState.set(p.getName() + ".editingMode", -1);
+                ItemStack menuMenu = new ItemStack(Material.LADDER);
+                ItemMeta menuMenuMeta = menuMenu.getItemMeta();
+                ItemStack oriItem = p.getInventory().getItem(8);
+                if (oriItem == null) {
+                    opState.set(p.getName() + ".itemAt8", new ItemStack(Material.AIR));
+                } else {
+                    opState.set(p.getName() + ".itemAt8", oriItem);
+                }
+
+
+                menuMenuMeta.setDisplayName("§c编辑模式");
+                menuMenuMeta.setLore(Arrays.asList("§a左键进入菜单编辑模式", "§b右键进入物品编辑模式"));
+                menuMenu.setItemMeta(menuMenuMeta);
+                p.getInventory().setItem(8, menuMenu);
+            }
+
+            if (opState.getInt(p.getName() + ".state", 0) == 2) {
+                if (editingMenu.get(p.getName()) != null) {
+                    p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除")));
+                    p.getInventory().setItem(7, new ItemStack(Material.AIR));
+                }
+            }
+
+            return;  //编辑模式无法运行命令
+        }
+
+        if (e.getInventory().getHolder() != null) {
+            openAMenu.remove(p.getName());
+        }
+
+
+    }
+
+    @EventHandler
+    public void onCloseTheChest(InventoryCloseEvent e) {
+
+
+        Player p = (Player) e.getPlayer();
+        if (p.isOp() && opState.getBoolean(p.getName() + ".on")) {
+
+            if (opState.getInt(p.getName() + ".state") == 1) {
+                p.getInventory().setItem(8, (ItemStack) opState.get(p.getName() + ".itemAt8"));
+                opState.set(p.getName() + ".itemAt8", null);
+                opState.set(p.getName() + ".state", 0);
+            }
+
+            if (editingMenu.get(p.getName()) != null && e.getInventory().getHolder() == null) {
+                File invFile = new File(GreatMenu.menuFolder, editingMenu.get(p.getName()) + ".yml");
+                YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
+                inv.set("size", e.getInventory().getSize());
+                setYmlItems(e.getInventory().getContents(), inv);
+                inv.set("title", e.getInventory().getName());
+                try {
+                    inv.save(invFile);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+                GreatMenu.reLoadMenus();
+            }
+            return;
+        }
+
+        openAMenu.remove(p.getName());
+
+    }
+
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onClickTheItemInMenu(InventoryClickEvent e) {
+        Player p = (Player) e.getWhoClicked();
+
+        if (p.isOp() && opState.getBoolean(p.getName() + ".on")) {
+            //初始化UI
+            if (opState.getInt(p.getName() + ".state") == 1) {
+                if (e.getClickedInventory() == null) {
+                    return;
+                }
+                if (e.getClickedInventory().getType() == InventoryType.PLAYER) {
+                    if (e.getSlot() == 8) {
+                        e.setCancelled(true);
+
+                        //进行物品栏初始化
+
+
+                        e.getClickedInventory().setItem(8, new ItemStack(Material.AIR));
+                        playerInventory.put(p.getName(), p.getInventory().getContents());
+
+                        e.getClickedInventory().clear();
+                        e.getClickedInventory().setItem(8, getAItemNamedAndLored(Material.BARRIER, "§c退出菜单编辑模式"));
+                        opState.set(p.getName() + ".state", 2);
+
+
+                        e.getClickedInventory().setItem(0, getAItemNamedAndLored(Material.SIGN, "§r名称工具"));
+                        e.getClickedInventory().setItem(1, getAItemNamedAndLored(Material.BOOK_AND_QUILL, "§rlore工具", Arrays.asList("§a左键添加", "§4右键删除")));
+                        e.getClickedInventory().setItem(4, getAItemNamedAndLored(Material.BUCKET, "§r光标工具", Collections.singletonList("§a可以移动物品")));
+                        if (e.getInventory().getHolder() == null) {
+                            e.getClickedInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除")));
+                        } else {
+                            e.getClickedInventory().setItem(7, getAItemNamedAndLored(Material.LEVER, "§r创建为菜单"));
+                        }
+
+                        opState.set(p.getName() + ".editingMode", 4); //默认为4光标工具
+
+                    }
+
+
+                }
+                return;
+            }
+
+
+            //UI中操作
+            if (opState.getInt(p.getName() + ".state") == 2) {
+
+
+                Inventory clickedInv = e.getClickedInventory();
+                if (clickedInv == null) {
+                    //否则会报错
+                    return;
+                }
+
+                //背包中操作
+                if (clickedInv.getType() == InventoryType.PLAYER) {
+                    if (e.getSlot() < 9) {
+                        e.setCancelled(true);
+                        if (e.getCurrentItem().getType() != Material.AIR) {
+                            opState.set(p.getName() + ".editingMode", e.getSlot());
+                        }
+
+                    }
+
+                    if (opState.getInt(p.getName() + ".editingMode") != 4) {
+                        e.setCancelled(true);
+                    }
+
+                    if (opState.getInt(p.getName() + ".editingMode") == 7) {
+                        opState.set(p.getName() + ".nowEditingSlot", e.getSlot());
+                        invEditing.put(p.getName(), e.getInventory());
+                        p.sendTitle("请为菜单分配一个内部名", null);
+                        Bukkit.getPluginManager().registerEvents(new CMListener(), GreatMenu.plugin);
+                        Bukkit.getScheduler().runTask(GreatMenu.plugin, p::closeInventory);
+
+                    }
+
+
+                    //退出事件
+                    if (e.getSlot() == 8) {
+
+                        opState.set(p.getName() + ".state", 0);
+                        e.setCancelled(true);   //必要步骤，否则最终会掉出原来8位置的物品
+                        clickedInv.clear();
+                        clickedInv.setContents(playerInventory.get(p.getName()));
+                        clickedInv.setItem(8, (ItemStack) opState.get(p.getName() + ".itemAt8"));
+                        opState.set(p.getName() + ".itemAt8", null);
+                        Bukkit.getScheduler().runTask(GreatMenu.plugin, p::closeInventory);
+                        playerInventory.remove(p.getName());
+
+                    }
+
+
+                }
+
+
+                //箱子中操作
+                if (clickedInv.getType() == InventoryType.CHEST) {
+                    if (opState.getInt(p.getName() + ".editingMode") == -1 || opState.getInt(p.getName() + ".editingMode") == 4) {
+                        return;
+                    }
+                    GreatMenu.log((e.getCurrentItem()));
+                    if (e.getCurrentItem() == null || e.getCurrentItem().getType() == Material.AIR) {
+                        return;
+                    }
+                    e.setCancelled(true);
+                    opState.set(p.getName() + ".nowEditingSlot", e.getSlot());
+                    invEditing.put(p.getName(), clickedInv);
+                    if (opState.getInt(p.getName() + ".editingMode") == 0) {
+                        itemEditing.put(p.getName(), e.getCurrentItem());
+                        p.sendTitle("请输入新名称", null);
+                        Bukkit.getPluginManager().registerEvents(new CMListener(), GreatMenu.plugin);
+                        Bukkit.getScheduler().runTask(GreatMenu.plugin, p::closeInventory);
+                    }
+
+                    if (opState.getInt(p.getName() + ".editingMode") == 1) {
+                        if (e.getClick().isLeftClick()) {
+                            itemEditing.put(p.getName(), e.getCurrentItem());
+                            p.sendTitle("请输入要增加的lore", null);
+                            Bukkit.getPluginManager().registerEvents(new CMListener(), GreatMenu.plugin);
+                            Bukkit.getScheduler().runTask(GreatMenu.plugin, p::closeInventory);
+                        } else if (e.getClick().isRightClick()) {
+                            clickedInv.setItem(e.getSlot(), removeAItemLore(e.getCurrentItem()));
+                        }
+                    }
+
+                    if (opState.getInt(p.getName() + ".editingMode") == 3) {
+                        if (e.getClick().isLeftClick()) {
+                            p.sendTitle("请输入要增加的指令，不含/", null);
+                            Bukkit.getPluginManager().registerEvents(new CMListener(), GreatMenu.plugin);
+                            Bukkit.getScheduler().runTask(GreatMenu.plugin, p::closeInventory);
+                        } else if (e.getClick().isRightClick()) {
+                            removeCmd(p);
+                        }
+                    }
+
+
+                }
+
+
+                return;
+            }
+
+            return;
+        }
+
+        if (openAMenu.containsKey(p.getName())) {
+            if (e.getClickedInventory() != null && e.getClickedInventory().getType() != InventoryType.PLAYER) {
+                e.setCancelled(true);
+                List<String> preExecuteCmds = GreatMenu.menusCommands.get(openAMenu.get(p.getName()))[e.getSlot()];
+                if (preExecuteCmds != null) {
+                    for (int i = 0; i < preExecuteCmds.size(); i++) {
+                        String tmpCmd = preExecuteCmds.get(i);
+                        tmpCmd = tmpCmd.replace("<Player>", p.getName());
+                        if (tmpCmd.startsWith("$c1")) {
+                            tmpCmd = tmpCmd.substring(3);
+                            p.chat("/" + tmpCmd);
+                            continue;
+                        }
+
+                        if (tmpCmd.startsWith("$c2")) {
+                            tmpCmd = tmpCmd.substring(3);
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), tmpCmd);
+                            continue;
+                        }
+
+                        if (tmpCmd.startsWith("$c")) {
+                            tmpCmd = tmpCmd.substring(2);
+                            p.chat(tmpCmd);
+                            continue;
+                        }
+
+                        if (tmpCmd.startsWith("$m")) {
+                            tmpCmd = tmpCmd.substring(2);
+                            p.sendMessage(tmpCmd);
+                            continue;
+                        }
+
+                    }
+                }
+
+            }
+        }
+
+    }
+
+
+    private ItemStack getAItemNamedAndLored(Material m, String s) {
+        ItemStack tmpItem = new ItemStack(m);
+        ItemMeta tmpMeta = tmpItem.getItemMeta();
+        tmpMeta.setDisplayName(s);
+        tmpItem.setItemMeta(tmpMeta);
+        return tmpItem;
+    }
+
+    private ItemStack getAItemNamedAndLored(Material m, String s, List<String> l) {
+        ItemStack tmpItem = new ItemStack(m);
+        ItemMeta tmpMeta = tmpItem.getItemMeta();
+        tmpMeta.setDisplayName(s);
+        tmpMeta.setLore(l);
+        tmpItem.setItemMeta(tmpMeta);
+        return tmpItem;
+    }
+
+    static private ItemStack changeAItem(ItemStack oriItem, String s) {
+        ItemMeta tmpMeta = oriItem.getItemMeta();
+        tmpMeta.setDisplayName(s);
+        oriItem.setItemMeta(tmpMeta);
+        return oriItem;
+    }
+
+    static private ItemStack changeAItem(ItemStack oriItem, String s, List<String> l) {
+        ItemMeta tmpMeta = oriItem.getItemMeta();
+        tmpMeta.setDisplayName(s);
+        tmpMeta.setLore(l);
+        oriItem.setItemMeta(tmpMeta);
+        return oriItem;
+    }
+
+    static private ItemStack addAItemLore(ItemStack oriItem, String l) {
+        ItemMeta tmpMeta = oriItem.getItemMeta();
+        List<String> tmpLore = tmpMeta.getLore();
+        if (tmpLore == null) {
+            tmpLore = new ArrayList<>();
+        }
+        tmpLore.add(l);
+        tmpMeta.setLore(tmpLore);
+        oriItem.setItemMeta(tmpMeta);
+        return oriItem;
+    }
+
+
+    static private ItemStack removeAItemLore(ItemStack oriItem) {
+        //安全的。
+        ItemMeta tmpMeta = oriItem.getItemMeta();
+        List<String> tmpLore = tmpMeta.getLore();
+        if (tmpLore == null) {
+            return oriItem;
+        }
+        tmpLore.remove(tmpLore.size() - 1);
+        tmpMeta.setLore(tmpLore);
+        oriItem.setItemMeta(tmpMeta);
+        return oriItem;
+    }
+
+    static public int getEditingMode(String p) {
+        return opState.getInt(p + ".editingMode");
+    }
+
+    static public void changeDisplayName(Player p, String n) {
+        Inventory inv = invEditing.get(p.getName());
+        p.openInventory(inv);
+        inv.setItem(opState.getInt(p.getName() + ".nowEditingSlot"), changeAItem(itemEditing.get(p.getName()), n));
+    }
+
+    static public void addLore(Player p, String l) {
+        Inventory inv = invEditing.get(p.getName());
+        p.openInventory(inv);
+        inv.setItem(opState.getInt(p.getName() + ".nowEditingSlot"), addAItemLore(itemEditing.get(p.getName()), l));
+    }
+
+    static public void addCmd(Player p, String c) {
+        String n = editingMenu.get(p.getName());
+        File invFile = new File(GreatMenu.menuFolder, n + ".yml");
+        YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
+        List<String> cmds = inv.getStringList("cmds." + opState.get(p.getName() + ".nowEditingSlot"));
+        if (cmds == null) {
+            cmds = new ArrayList<>();
+        }
+        cmds.add(c);
+        inv.set("cmds." + opState.get(p.getName() + ".nowEditingSlot"), cmds);
+        try {
+            inv.save(invFile);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        GreatMenu.reLoadMenus();
+        p.openInventory(invEditing.get(p.getName()));
+    }
+
+    static void removeCmd(Player p) {
+        String n = editingMenu.get(p.getName());
+        File invFile = new File(GreatMenu.menuFolder, n + ".yml");
+        YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
+        List<String> cmds = inv.getStringList("cmds." + opState.get(p.getName() + ".nowEditingSlot"));
+        if (cmds == null) {
+            cmds = new ArrayList<>();
+        }
+        if (cmds.isEmpty()) {
+            return;
+        }
+        cmds.remove(cmds.size() - 1);
+        inv.set("cmds." + opState.get(p.getName() + ".nowEditingSlot"), cmds);
+        try {
+            inv.save(invFile);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        GreatMenu.reLoadMenus();
+    }
+
+
+    static public void createAMenu(Player p, String n) {
+        YamlConfiguration inv = new YamlConfiguration();
+        File invFile = new File(GreatMenu.menuFolder, n + ".yml");
+        inv.set("size", invEditing.get(p.getName()).getSize());
+        inv.set("title", "Default");
+        setYmlItems(invEditing.get(p.getName()).getContents(), inv);
+        editingMenu.put(p.getName(), n);
+        Inventory tmpInv = Bukkit.createInventory(null, invEditing.get(p.getName()).getSize(), "Default");
+        try {
+            inv.save(invFile);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        GreatMenu.reLoadMenus();
+        tmpInv.setContents(invEditing.get(p.getName()).getContents());
+        p.openInventory(tmpInv);
+
+    }
+
+    public static void setYmlItems(ItemStack[] items, YamlConfiguration inv) {
+        for (int i = 0; i < items.length; i++) {
+            inv.set("items." + i, items[i]);
+        }
+    }
+
+    public static ItemStack[] getYmlItems(YamlConfiguration inv) {
+        ItemStack[] res = new ItemStack[inv.getInt("size")];
+        for (int i = 0; i < inv.getInt("size"); i++) {
+            res[i] = inv.getItemStack("items." + i);
+        }
+        return res;
+    }
+
+
+}

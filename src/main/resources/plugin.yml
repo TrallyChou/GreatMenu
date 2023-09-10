@@ -1,0 +1,8 @@
+name: GreatMenu
+main: com.trally.GreatMenu
+version: 1.0
+author: Trally
+describe: A great menu plugin
+commands:
+  greatmenu:
+    description: Main command
