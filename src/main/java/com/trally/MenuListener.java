@@ -142,6 +142,9 @@ public class MenuListener implements Listener {
                 setYmlItems(e.getInventory().getContents(), inv);
                 //inv.set("title", e.getInventory().getName());
                 menuSave(p, invFile, inv);
+                //管箱子意味着保存，保存意味着重载，重载意味着invEditing中存的箱子仍然是原来的，而不是重载后重新创建的，导致bug。所以，执行下一条语句
+                invEditing.put(p.getName(), GreatMenu.menus.get(editingMenu.get(p.getName())));
+                hideCmdsOnLore(p);
 //                try {
 //                    inv.save(invFile);
 //                } catch (IOException ex) {
@@ -149,7 +152,6 @@ public class MenuListener implements Listener {
 //                }
 
             }
-            opState.set(p.getName() + "showCmds", false);
             return;
         }
 
@@ -291,7 +293,9 @@ public class MenuListener implements Listener {
                             Bukkit.getPluginManager().registerEvents(new CMListener(), GreatMenu.plugin);
                             Bukkit.getScheduler().runTask(GreatMenu.plugin, p::closeInventory);
                         } else if (e.getClick().isRightClick()) {
+                            hideCmdsOnLore(p);
                             clickedInv.setItem(e.getSlot(), removeAItemLore(e.getCurrentItem()));
+                            showCmdsOnLore(p);
                         }
                     }
 
@@ -420,14 +424,16 @@ public class MenuListener implements Listener {
 
     static public void changeDisplayName(Player p, String n) {
         Inventory inv = invEditing.get(p.getName());
-        p.openInventory(inv);
         inv.setItem(opState.getInt(p.getName() + ".nowEditingSlot"), changeAItem(itemEditing.get(p.getName()), n));
+        p.openInventory(inv);
+
     }
 
     static public void addLore(Player p, String l) {
         Inventory inv = invEditing.get(p.getName());
-        p.openInventory(inv);
         inv.setItem(opState.getInt(p.getName() + ".nowEditingSlot"), addAItemLore(itemEditing.get(p.getName()), l));
+        p.openInventory(inv);
+
     }
 
     static public void addCmd(Player p, String c) {
@@ -508,10 +514,11 @@ public class MenuListener implements Listener {
 
 
     public static void showCmdsOnLore(Player p) {
-        if (!opState.getBoolean(p.getName() + ".showCmds", false)) {
+        if (!opState.getBoolean(p.getName() + ".showCmds", false) && editingMenu.containsKey(p.getName())) {
             String nowMenu = editingMenu.get(p.getName());
             Inventory tmpMenu = GreatMenu.menus.get(nowMenu);
             List<String>[] cmdListsOfThisMenu = GreatMenu.menusCommands.get(nowMenu);
+
             for (int i = 0; i < cmdListsOfThisMenu.length; i++) {
                 if (cmdListsOfThisMenu[i] != null && !cmdListsOfThisMenu[i].isEmpty() && tmpMenu.getItem(i) != null) {
                     tmpMenu.setItem(i, addAItemLore(addAItemLore(tmpMenu.getItem(i), "§c§l运行："), cmdListsOfThisMenu[i]));
@@ -525,14 +532,17 @@ public class MenuListener implements Listener {
     public static void hideCmdsOnLore(Player p) {
 
         if (opState.getBoolean(p.getName() + ".showCmds", false)) {
-            String nowMenu = editingMenu.get(p.getName());
-            Inventory tmpMenu = GreatMenu.menus.get(nowMenu);
-            List<String>[] cmdListsOfThisMenu = GreatMenu.menusCommands.get(nowMenu);
-            for (int i = 0; i < cmdListsOfThisMenu.length; i++) {
-                if (cmdListsOfThisMenu[i] != null && tmpMenu.getItem(i) != null) {
-                    tmpMenu.setItem(i, removeAItemLore(tmpMenu.getItem(i), 1 + cmdListsOfThisMenu[i].size()));
+            if (editingMenu.containsKey(p.getName())) {
+                String nowMenu = editingMenu.get(p.getName());
+                Inventory tmpMenu = GreatMenu.menus.get(nowMenu);
+                List<String>[] cmdListsOfThisMenu = GreatMenu.menusCommands.get(nowMenu);
+                for (int i = 0; i < cmdListsOfThisMenu.length; i++) {
+                    if (cmdListsOfThisMenu[i] != null && !cmdListsOfThisMenu[i].isEmpty() && tmpMenu.getItem(i) != null) {
+                        tmpMenu.setItem(i, removeAItemLore(tmpMenu.getItem(i), 1 + cmdListsOfThisMenu[i].size()));
+                    }
                 }
             }
+
             opState.set(p.getName() + ".showCmds", false);
         }
     }
@@ -569,7 +579,7 @@ public class MenuListener implements Listener {
             return oriItem;
         }
         if (tmpLore.size() - 1 - i > -1) {
-            tmpLore = tmpLore.subList(0, tmpLore.size() - 1 - i);
+            tmpLore = tmpLore.subList(0, tmpLore.size() - i);//因为subList取左闭右开区间，自动+1
         } else {
             tmpLore = new ArrayList<>();
         }
