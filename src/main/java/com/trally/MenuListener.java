@@ -3,7 +3,7 @@
  *
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
  */
 
@@ -16,10 +16,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.*;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -38,6 +35,8 @@ public class MenuListener implements Listener {
 
     static HashMap<String, String> openAMenu = new HashMap<>();
 
+    static HashMap<String, List<String>> clipboard = new HashMap<>();
+
     /*
      * state:
      * 0: 无
@@ -53,6 +52,7 @@ public class MenuListener implements Listener {
      * 2: 尚无
      * 3: 命令工具
      * 4: 光标工具
+     * 5: 指令光标工具
      * 6: 更改容器名
      * 7: 设置菜单id
      */
@@ -95,7 +95,7 @@ public class MenuListener implements Listener {
 
 
                 menuMenuMeta.setDisplayName("§c编辑模式");
-                menuMenuMeta.setLore(Arrays.asList("§a左键进入菜单编辑模式", "§b右键进入物品编辑模式"));
+                menuMenuMeta.setLore(Collections.singletonList("§a点击进入编辑模式"));
                 menuMenu.setItemMeta(menuMenuMeta);
                 p.getInventory().setItem(8, menuMenu);
             }
@@ -103,6 +103,7 @@ public class MenuListener implements Listener {
             if (opState.getInt(p.getName() + ".state", 0) == 2) {
                 if (editingMenu.get(p.getName()) != null) {
                     p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除")));
+                    p.getInventory().setItem(5, getAItemNamedAndLored(Material.FISHING_ROD, "§r命令光标工具", Arrays.asList("§a左键复制", "§4右键粘贴", "§4Q键删除")));
                     p.getInventory().setItem(6, getAItemNamedAndLored(Material.NAME_TAG, "§r更改菜单标题"));
                     p.getInventory().setItem(7, new ItemStack(Material.AIR));
                 }
@@ -191,6 +192,7 @@ public class MenuListener implements Listener {
 
                         if (e.getInventory().getHolder() == null && editingMenu.containsKey(p.getName())) {
                             e.getClickedInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除")));
+                            e.getClickedInventory().setItem(5, getAItemNamedAndLored(Material.FISHING_ROD, "§r命令光标工具", Arrays.asList("§a左键复制", "§4右键粘贴", "§4Q键删除")));
                             e.getClickedInventory().setItem(6, getAItemNamedAndLored(Material.NAME_TAG, "§r更改菜单标题"));
                         } else {
                             e.getClickedInventory().setItem(7, getAItemNamedAndLored(Material.LEVER, "§r创建为菜单"));
@@ -309,6 +311,18 @@ public class MenuListener implements Listener {
                         }
                     }
 
+                    if (opState.getInt(p.getName() + ".editingMode") == 5) {
+                        if (e.getClick().isLeftClick()) {
+                            copyCmds(p);
+                        } else if (e.getClick().isRightClick()) {
+                            pasteCmds(p);
+                        } else if (e.getClick() == ClickType.DROP) {
+                            removeAllCmds(p);
+                        }
+
+
+                    }
+
 
                 }
 
@@ -320,43 +334,62 @@ public class MenuListener implements Listener {
         }
 
         if (openAMenu.containsKey(p.getName())) {
-            if (e.getClickedInventory() != null && e.getClickedInventory().getType() != InventoryType.PLAYER) {
-                e.setCancelled(true);
-                List<String> preExecuteCmds = GreatMenu.menusCommands.get(openAMenu.get(p.getName()))[e.getSlot()];
-                if (preExecuteCmds != null) {
-                    for (int i = 0; i < preExecuteCmds.size(); i++) {
-                        String tmpCmd = preExecuteCmds.get(i);
-                        tmpCmd = tmpCmd.replace("<Player>", p.getName());
-                        if (tmpCmd.startsWith("$c1")) {
-                            tmpCmd = tmpCmd.substring(3);
-                            p.chat("/" + tmpCmd);
-                            continue;
-                        }
+            if (e.getClickedInventory() != null) {
+                if (e.getClickedInventory().getType() != InventoryType.PLAYER) {
+                    e.setCancelled(true);
+                    List<String> preExecuteCmds = GreatMenu.menusCommands.get(openAMenu.get(p.getName()))[e.getSlot()];
+                    if (preExecuteCmds != null) {
+                        for (int i = 0; i < preExecuteCmds.size(); i++) {
+                            String tmpCmd = preExecuteCmds.get(i);
+                            tmpCmd = tmpCmd.replace("<Player>", p.getName());
+                            if (tmpCmd.startsWith("$c1")) {
+                                tmpCmd = tmpCmd.substring(3);
+                                p.chat("/" + tmpCmd);
+                                continue;
+                            }
 
-                        if (tmpCmd.startsWith("$c2")) {
-                            tmpCmd = tmpCmd.substring(3);
-                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), tmpCmd);
-                            continue;
-                        }
+                            if (tmpCmd.startsWith("$c2")) {
+                                tmpCmd = tmpCmd.substring(3);
+                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), tmpCmd);
+                                continue;
+                            }
 
-                        if (tmpCmd.startsWith("$c")) {
-                            tmpCmd = tmpCmd.substring(2);
-                            p.chat(tmpCmd);
-                            continue;
-                        }
+                            if (tmpCmd.startsWith("$c")) {
+                                tmpCmd = tmpCmd.substring(2);
+                                p.chat(tmpCmd);
+                                continue;
+                            }
 
-                        if (tmpCmd.startsWith("$m")) {
-                            tmpCmd = tmpCmd.substring(2);
-                            p.sendMessage(tmpCmd);
-                            continue;
-                        }
+                            if (tmpCmd.startsWith("$m")) {
+                                tmpCmd = tmpCmd.substring(2);
+                                p.sendMessage(tmpCmd);
+                                continue;
+                            }
 
+                        }
                     }
+                } else {
+                    if (e.getClick().isShiftClick() || e.getClick() == ClickType.DOUBLE_CLICK || e.getClick() == ClickType.UNKNOWN)
+                        e.setCancelled(true);
                 }
+
 
             }
         }
 
+    }
+
+
+    @EventHandler
+    public void dragEventInMenu(InventoryDragEvent e) {
+        Player p = (Player) e.getWhoClicked();
+        if (p.isOp() && opState.getBoolean(p.getName() + ".on")) {
+            return;
+        }
+
+        if (openAMenu.containsKey(p.getName())) {
+            e.setCancelled(true);
+        }
     }
 
 
@@ -474,6 +507,51 @@ public class MenuListener implements Listener {
         });
     }
 
+    static void removeAllCmds(Player p) {
+        String n = editingMenu.get(p.getName());
+        File invFile = new File(GreatMenu.menuFolder, n + ".yml");
+        YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
+        inv.set("cmds." + opState.get(p.getName() + ".nowEditingSlot"), null);
+        menuSave(p, invFile, inv);
+        Bukkit.getScheduler().runTask(GreatMenu.plugin, () -> {
+            p.closeInventory();
+            editingMenu.put(p.getName(), n);
+            p.openInventory(GreatMenu.menus.get(n));
+        });
+    }
+
+    static void copyCmds(Player p) {
+        String n = editingMenu.get(p.getName());
+        File invFile = new File(GreatMenu.menuFolder, n + ".yml");
+        YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
+        List<String> cmds = inv.getStringList("cmds." + opState.get(p.getName() + ".nowEditingSlot"));
+        if (cmds == null) {
+            return;
+        }
+        clipboard.put(p.getName(), cmds);
+    }
+
+    static void pasteCmds(Player p) {
+        String n = editingMenu.get(p.getName());
+        File invFile = new File(GreatMenu.menuFolder, n + ".yml");
+        YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
+        List<String> cmds = inv.getStringList("cmds." + opState.get(p.getName() + ".nowEditingSlot"));
+        if (cmds == null) {
+            cmds = new ArrayList<>();
+        }
+        if (clipboard.get(p.getName()) != null) {
+            cmds.addAll(clipboard.get(p.getName()));
+        }
+        inv.set("cmds." + opState.get(p.getName() + ".nowEditingSlot"), cmds);
+        menuSave(p, invFile, inv);
+        invEditing.put(p.getName(), GreatMenu.menus.get(n));
+        Bukkit.getScheduler().runTask(GreatMenu.plugin, () -> {
+            p.closeInventory();
+            editingMenu.put(p.getName(), n);
+            p.openInventory(GreatMenu.menus.get(n));
+        });
+    }
+
 
     //这里需要实现其它类型的箱子
     static public void createAMenu(Player p, String n) {
@@ -520,7 +598,10 @@ public class MenuListener implements Listener {
             List<String>[] cmdListsOfThisMenu = GreatMenu.menusCommands.get(nowMenu);
 
             for (int i = 0; i < cmdListsOfThisMenu.length; i++) {
-                if (cmdListsOfThisMenu[i] != null && !cmdListsOfThisMenu[i].isEmpty() && tmpMenu.getItem(i) != null) {
+                if (cmdListsOfThisMenu[i] != null && !cmdListsOfThisMenu[i].isEmpty()) {
+                    if (tmpMenu.getItem(i) == null) {
+                        tmpMenu.setItem(i, changeAItem(new ItemStack(Material.COMMAND), "§4这个位置没有方块，但是有命令§g§m§c"));
+                    }
                     tmpMenu.setItem(i, addAItemLore(addAItemLore(tmpMenu.getItem(i), "§c§l运行："), cmdListsOfThisMenu[i]));
                 }
             }
@@ -538,7 +619,12 @@ public class MenuListener implements Listener {
                 List<String>[] cmdListsOfThisMenu = GreatMenu.menusCommands.get(nowMenu);
                 for (int i = 0; i < cmdListsOfThisMenu.length; i++) {
                     if (cmdListsOfThisMenu[i] != null && !cmdListsOfThisMenu[i].isEmpty() && tmpMenu.getItem(i) != null) {
-                        tmpMenu.setItem(i, removeAItemLore(tmpMenu.getItem(i), 1 + cmdListsOfThisMenu[i].size()));
+                        if (tmpMenu.getItem(i).getItemMeta().getDisplayName() != null && tmpMenu.getItem(i).getItemMeta().getDisplayName().endsWith("§g§m§c")) {
+                            tmpMenu.setItem(i, new ItemStack(Material.AIR));
+                        } else {
+                            tmpMenu.setItem(i, removeAItemLore(tmpMenu.getItem(i), 1 + cmdListsOfThisMenu[i].size()));
+                        }
+
                     }
                 }
             }

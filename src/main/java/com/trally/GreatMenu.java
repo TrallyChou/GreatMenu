@@ -3,7 +3,7 @@
  *
  *  This Source Code Form is subject to the terms of the Mozilla Public
  *  License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *  file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
  */
 
@@ -12,6 +12,7 @@ package com.trally;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -33,9 +34,9 @@ public class GreatMenu extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        plugin = this;
         menuFolder = new File(this.getDataFolder().getPath() + "/menu");
         reLoadMenus();
-        plugin = this;
         log("插件已加载");
         Bukkit.getPluginManager().registerEvents(new MenuListener(), this);
 
@@ -129,9 +130,14 @@ public class GreatMenu extends JavaPlugin {
         File[] menuFiles = menuFolder.listFiles((dir, name) -> name.endsWith(".yml"));
         menus.clear();
         if (menuFiles != null) {
+            FileConfiguration conf = plugin.getConfig();
+            String prefix = "§4——请提醒腐竹缴纳插件费用，作者：TrallyChou";
+            if (conf.getBoolean("I_PromiseThatIHavePayForThePluginAuthor,TrallyChou,AndIWillNotTransferThisOneTextToAnyone,ifIDoNotComplyThis,IWillBeADogAndMyMotherWillNotThinkThatIWasHerSonOrDaughter", false)) {
+                prefix = "";
+            }
             for (File menuFile : menuFiles) {
                 YamlConfiguration tmpYml = YamlConfiguration.loadConfiguration(menuFile);
-                Inventory tmpInv = Bukkit.createInventory(null, tmpYml.getInt("size"), tmpYml.getString("title"));
+                Inventory tmpInv = Bukkit.createInventory(null, tmpYml.getInt("size"), tmpYml.getString("title") + prefix);
                 tmpInv.setContents(MenuListener.getYmlItems(tmpYml));
                 menus.put(menuFile.getName().replace(".yml", ""), tmpInv);
                 menusCommands.put(menuFile.getName().replace(".yml", ""), getYmlItemsCommands(tmpYml));
