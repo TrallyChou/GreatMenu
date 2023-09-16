@@ -87,6 +87,25 @@ public class GreatMenu extends JavaPlugin {
                     }
                 }
 
+                if (args[0].equals("remove")) {
+                    if (menus.containsKey(args[1])) {
+                        File tmp = new File(menuFolder, args[1] + ".yml");
+                        try {
+                            if (tmp.delete()) {
+                                p.sendMessage("§a删除成功");
+                                reLoadMenus();
+                            } else {
+                                p.sendMessage("§a可能由于文件被打开等原因，删除失败");
+                            }
+                        } catch (Exception e) {
+                            p.sendMessage("§a可能由于文件被打开等原因，删除失败");
+                            throw new RuntimeException(e);
+                        }
+                    } else {
+                        p.sendMessage("§4没有此菜单");
+                    }
+                }
+
             }
 
             if (args.length == 1) {
@@ -98,6 +117,10 @@ public class GreatMenu extends JavaPlugin {
                     MenuListener.opState.set(p.getName() + ".on", true);
                     p.sendMessage("§a开启编辑模式");
                 }
+                if (args[0].equals("list") && p.isOp()) {
+                    p.sendMessage(menuFolder.list((dir, name) -> name.endsWith(".yml")));
+                }
+
             }
 
             if (args.length == 0) {
@@ -105,6 +128,8 @@ public class GreatMenu extends JavaPlugin {
                 p.sendMessage("§b/greatmenu open [菜单名]  打开菜单");
                 p.sendMessage("§b/greatmenu on/off        开启/关闭编辑模式");
                 p.sendMessage("§b/greatmenu empty [行数]   打开一个n行的匿名箱子");
+                p.sendMessage("§b/greatmenu list          列出所有菜单");
+                p.sendMessage("§b/greatmenu remove [菜单名] 删除菜单");
                 p.sendMessage("§a-----------------------");
             }
 
@@ -132,9 +157,9 @@ public class GreatMenu extends JavaPlugin {
         menus.clear();
         if (menuFiles != null) {
             FileConfiguration conf = plugin.getConfig();
-            String prefix = "§4——请提醒腐竹缴纳插件费用，作者：TrallyChou";
+            String suffix = "§4——请提醒腐竹缴纳插件费用，作者：TrallyChou";
             if (conf.getBoolean("I_PromiseThatIHavePayForThePluginAuthor,TrallyChou,AndIWillNotTransferThisOneTextToAnyone,ifIDoNotComplyThis,IWillBeADogAndMyMotherWillNotThinkThatIWasHerSonOrDaughter", false)) {
-                prefix = "";
+                suffix = "";
             }
             for (File menuFile : menuFiles) {
                 YamlConfiguration tmpYml = YamlConfiguration.loadConfiguration(menuFile);
@@ -142,9 +167,9 @@ public class GreatMenu extends JavaPlugin {
 //                Bukkit.createInventory(null, InventoryType.valueOf(inv.getString("invType")), "Default");
                 if (tmpYml.getString("invType", "Chest").equals("Chest")) {
 
-                    tmpInv = Bukkit.createInventory(null, tmpYml.getInt("size"), tmpYml.getString("title") + prefix);
+                    tmpInv = Bukkit.createInventory(null, tmpYml.getInt("size"), tmpYml.getString("title") + suffix);
                 } else {
-                    tmpInv = Bukkit.createInventory(null, InventoryType.valueOf(tmpYml.getString("invType")), tmpYml.getString("title") + prefix);
+                    tmpInv = Bukkit.createInventory(null, InventoryType.valueOf(tmpYml.getString("invType")), tmpYml.getString("title") + suffix);
                 }
 
                 tmpInv.setContents(MenuListener.getYmlItems(tmpYml));

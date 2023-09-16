@@ -6,3 +6,5 @@ describe: A great menu plugin
 commands:
   greatmenu:
     description: Main command
+    aliases:
+      - gmu
