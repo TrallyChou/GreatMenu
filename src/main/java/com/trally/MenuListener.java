@@ -269,8 +269,8 @@ public class MenuListener implements Listener {
                 }
 
 
-                //箱子中操作
-                if (clickedInv.getType() == InventoryType.CHEST) {
+                //非背包操作
+                if (clickedInv.getType() != InventoryType.PLAYER) {
                     if (opState.getInt(p.getName() + ".editingMode") == -1 || opState.getInt(p.getName() + ".editingMode") == 4) {
                         return;
                     }
@@ -559,12 +559,21 @@ public class MenuListener implements Listener {
         File invFile = new File(GreatMenu.menuFolder, n + ".yml");
         inv.set("size", invEditing.get(p.getName()).getSize());
         inv.set("title", "Default");
+        if (invEditing.get(p.getName()).getType() != InventoryType.CHEST) {
+            inv.set("invType", invEditing.get(p.getName()).getType().name());
+        }
         setYmlItems(invEditing.get(p.getName()).getContents(), inv);
         editingMenu.put(p.getName(), n);
-        Inventory tmpInv = Bukkit.createInventory(null, invEditing.get(p.getName()).getSize(), "Default");
-        menuSave(p, invFile, inv);
+        Inventory tmpInv;
+        if (invEditing.get(p.getName()).getType() != InventoryType.CHEST) {
+
+            tmpInv = Bukkit.createInventory(null, InventoryType.valueOf(inv.getString("invType")), "Default");
+        } else {
+            tmpInv = Bukkit.createInventory(null, invEditing.get(p.getName()).getSize(), "Default");
+        }
         tmpInv.setContents(invEditing.get(p.getName()).getContents());
-        p.openInventory(tmpInv);
+        menuSave(p, invFile, inv);
+        p.openInventory(GreatMenu.menus.get(n));
 
     }
 

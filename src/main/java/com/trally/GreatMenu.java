@@ -15,6 +15,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -137,7 +138,15 @@ public class GreatMenu extends JavaPlugin {
             }
             for (File menuFile : menuFiles) {
                 YamlConfiguration tmpYml = YamlConfiguration.loadConfiguration(menuFile);
-                Inventory tmpInv = Bukkit.createInventory(null, tmpYml.getInt("size"), tmpYml.getString("title") + prefix);
+                Inventory tmpInv;
+//                Bukkit.createInventory(null, InventoryType.valueOf(inv.getString("invType")), "Default");
+                if (tmpYml.getString("invType", "Chest").equals("Chest")) {
+
+                    tmpInv = Bukkit.createInventory(null, tmpYml.getInt("size"), tmpYml.getString("title") + prefix);
+                } else {
+                    tmpInv = Bukkit.createInventory(null, InventoryType.valueOf(tmpYml.getString("invType")), tmpYml.getString("title") + prefix);
+                }
+
                 tmpInv.setContents(MenuListener.getYmlItems(tmpYml));
                 menus.put(menuFile.getName().replace(".yml", ""), tmpInv);
                 menusCommands.put(menuFile.getName().replace(".yml", ""), getYmlItemsCommands(tmpYml));
