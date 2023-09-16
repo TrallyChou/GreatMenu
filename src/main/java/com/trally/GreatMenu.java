@@ -50,10 +50,10 @@ public class GreatMenu extends JavaPlugin {
                 if (args[0].equals("open")) {
                     if (menus.containsKey(args[1])) {
                         if (p.hasPermission("greatmenu." + args[1])) {
-                            p.openInventory(menus.get(args[1]));
                             if (p.isOp()) {
                                 MenuListener.editingMenu.put(p.getName(), args[1]);
                             }
+                            p.openInventory(menus.get(args[1]));
                         } else {
                             p.sendMessage("§4无法为你打开这个菜单");
                         }
@@ -143,7 +143,7 @@ public class GreatMenu extends JavaPlugin {
     public static List<String>[] getYmlItemsCommands(YamlConfiguration y) {
         List<String>[] res = new List[y.getInt("size")];
         for (int i = 0; i < y.getInt("size"); i++) {
-            res[i] = (List<String>) y.getList("cmds." + i);
+            res[i] = (List<String>) y.getList("cmds." + i); //注意:可能为null
         }
         return res;
     }

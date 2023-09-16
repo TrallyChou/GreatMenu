@@ -47,6 +47,11 @@ public class CMListener implements Listener {
                     AsyncPlayerChatEvent.getHandlerList().unregister(this);
                     break;
 
+                case 6:
+                    e.setCancelled(true);
+                    MenuListener.changeAMenuName(p,msg);
+                    AsyncPlayerChatEvent.getHandlerList().unregister(this);
+                    break;
 
                 case 7:
                     e.setCancelled(true);
