@@ -102,7 +102,8 @@ public class MenuListener implements Listener {
 
             if (opState.getInt(p.getName() + ".state", 0) == 2) {
                 if (editingMenu.get(p.getName()) != null) {
-                    p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除")));
+                    p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具",
+                            Arrays.asList("§a左键添加", "§4右键删除", "§4数字键删除指定行（1-9）")));
                     p.getInventory().setItem(5, getAItemNamedAndLored(Material.FISHING_ROD, "§r命令光标工具", Arrays.asList("§a左键复制", "§4右键粘贴", "§4Q键删除")));
                     p.getInventory().setItem(6, getAItemNamedAndLored(Material.NAME_TAG, "§r更改菜单标题"));
                     p.getInventory().setItem(7, new ItemStack(Material.AIR));
@@ -191,7 +192,8 @@ public class MenuListener implements Listener {
                         e.getClickedInventory().setItem(4, getAItemNamedAndLored(Material.BUCKET, "§r光标工具", Collections.singletonList("§a可以移动物品")));
 
                         if (e.getInventory().getHolder() == null && editingMenu.containsKey(p.getName())) {
-                            e.getClickedInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除")));
+                            p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具",
+                                    Arrays.asList("§a左键添加", "§4右键删除", "§4数字键删除指定行（1-9）")));
                             e.getClickedInventory().setItem(5, getAItemNamedAndLored(Material.FISHING_ROD, "§r命令光标工具", Arrays.asList("§a左键复制", "§4右键粘贴", "§4Q键删除")));
                             e.getClickedInventory().setItem(6, getAItemNamedAndLored(Material.NAME_TAG, "§r更改菜单标题"));
                         } else {
@@ -303,11 +305,13 @@ public class MenuListener implements Listener {
 
                     if (opState.getInt(p.getName() + ".editingMode") == 3) {
                         if (e.getClick().isLeftClick()) {
-                            p.sendTitle("请输入要增加的指令，不含/", null);
+                            p.sendTitle("请输入要增加的执行", "可以使用 %行数 为前缀来添加到指定行");
                             Bukkit.getPluginManager().registerEvents(new CMListener(), GreatMenu.plugin);
                             Bukkit.getScheduler().runTask(GreatMenu.plugin, p::closeInventory);
                         } else if (e.getClick().isRightClick()) {
                             removeCmd(p);
+                        } else if (e.getClick() == ClickType.NUMBER_KEY) {
+                            removeCmdAt(p, e.getHotbarButton());
                         }
                     }
 
@@ -477,7 +481,22 @@ public class MenuListener implements Listener {
         if (cmds == null) {
             cmds = new ArrayList<>();
         }
-        cmds.add(c);
+        if (c.startsWith("%")) {
+            try {
+                int index = Integer.parseInt(c.substring(1, 2)) - 1;
+                if (index >= 0 && index <= cmds.size()) {
+                    cmds.add(index, c.substring(2));
+                } else {
+                    p.sendMessage("你输入的行数不存在");
+                }
+            } catch (Exception e) {
+                p.sendMessage("你的输入存在问题");
+            }
+
+        } else {
+            cmds.add(c);
+        }
+
         inv.set("cmds." + opState.get(p.getName() + ".nowEditingSlot"), cmds);
         menuSave(p, invFile, inv);
         invEditing.put(p.getName(), GreatMenu.menus.get(n));
@@ -512,6 +531,32 @@ public class MenuListener implements Listener {
         File invFile = new File(GreatMenu.menuFolder, n + ".yml");
         YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
         inv.set("cmds." + opState.get(p.getName() + ".nowEditingSlot"), null);
+        menuSave(p, invFile, inv);
+        Bukkit.getScheduler().runTask(GreatMenu.plugin, () -> {
+            p.closeInventory();
+            editingMenu.put(p.getName(), n);
+            p.openInventory(GreatMenu.menus.get(n));
+        });
+    }
+
+    static void removeCmdAt(Player p, int index) {
+        String n = editingMenu.get(p.getName());
+        File invFile = new File(GreatMenu.menuFolder, n + ".yml");
+        YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
+        List<String> cmds = inv.getStringList("cmds." + opState.get(p.getName() + ".nowEditingSlot"));
+        if (cmds == null) {
+            cmds = new ArrayList<>();
+        }
+        if (cmds.isEmpty()) {
+            return;
+        }
+        if (index < cmds.size()) {
+            cmds.remove(index);
+        } else {
+            return;
+        }
+
+        inv.set("cmds." + opState.get(p.getName() + ".nowEditingSlot"), cmds);
         menuSave(p, invFile, inv);
         Bukkit.getScheduler().runTask(GreatMenu.plugin, () -> {
             p.closeInventory();
@@ -605,12 +650,16 @@ public class MenuListener implements Listener {
             String nowMenu = editingMenu.get(p.getName());
             Inventory tmpMenu = GreatMenu.menus.get(nowMenu);
             List<String>[] cmdListsOfThisMenu = GreatMenu.menusCommands.get(nowMenu);
-
             for (int i = 0; i < cmdListsOfThisMenu.length; i++) {
                 if (cmdListsOfThisMenu[i] != null && !cmdListsOfThisMenu[i].isEmpty()) {
                     if (tmpMenu.getItem(i) == null) {
                         tmpMenu.setItem(i, changeAItem(new ItemStack(Material.COMMAND), "§4这个位置没有方块，但是有命令§g§m§c"));
                     }
+
+                    for (int j = 0; j < cmdListsOfThisMenu[i].size(); j++) {
+                        cmdListsOfThisMenu[i].set(j, "§a" + (j + 1) + " - §e" + cmdListsOfThisMenu[i].get(j));
+                    }
+
                     tmpMenu.setItem(i, addAItemLore(addAItemLore(tmpMenu.getItem(i), "§c§l运行："), cmdListsOfThisMenu[i]));
                 }
             }
