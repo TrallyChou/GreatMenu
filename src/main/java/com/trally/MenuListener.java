@@ -346,19 +346,24 @@ public class MenuListener implements Listener {
                         for (int i = 0; i < preExecuteCmds.size(); i++) {
                             String tmpCmd = preExecuteCmds.get(i);
                             tmpCmd = tmpCmd.replace("<Player>", p.getName());
-                            if (tmpCmd.startsWith("$c1")) {
+                            if (tmpCmd.startsWith("$c1")) {  //命令
                                 tmpCmd = tmpCmd.substring(3);
                                 p.chat("/" + tmpCmd);
                                 continue;
                             }
 
-                            if (tmpCmd.startsWith("$c2")) {
+                            if (tmpCmd.startsWith("$c2")) {  //控制台命令
                                 tmpCmd = tmpCmd.substring(3);
                                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), tmpCmd);
                                 continue;
                             }
 
-                            if (tmpCmd.startsWith("$c")) {
+                            if (tmpCmd.equals("!c")) {  //关闭
+                                p.closeInventory();
+                                continue;
+                            }
+
+                            if (tmpCmd.startsWith("$c")) { //chat说话
                                 tmpCmd = tmpCmd.substring(2);
                                 p.chat(tmpCmd);
                                 continue;
@@ -369,6 +374,13 @@ public class MenuListener implements Listener {
                                 p.sendMessage(tmpCmd);
                                 continue;
                             }
+
+                            if (tmpCmd.startsWith("$t")) {
+                                tmpCmd = tmpCmd.substring(2);
+                                p.sendTitle(tmpCmd,"");
+                                continue;
+                            }
+
 
                         }
                     }

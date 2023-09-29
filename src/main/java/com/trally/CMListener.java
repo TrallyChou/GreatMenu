@@ -15,7 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 public class CMListener implements Listener {
-
+    //我已经忘记”CM“是什么意思了QAQ，大概是CloseMenu  (?)
     @EventHandler
     void onChat(AsyncPlayerChatEvent e) {
         Player p = e.getPlayer();
@@ -43,19 +43,19 @@ public class CMListener implements Listener {
                     break;
                 case 3:
                     e.setCancelled(true);
-                    MenuListener.addCmd(p,msg);
+                    MenuListener.addCmd(p, msg);
                     AsyncPlayerChatEvent.getHandlerList().unregister(this);
                     break;
 
                 case 6:
                     e.setCancelled(true);
-                    MenuListener.changeAMenuName(p,msg);
+                    MenuListener.changeAMenuName(p, msg);
                     AsyncPlayerChatEvent.getHandlerList().unregister(this);
                     break;
 
                 case 7:
                     e.setCancelled(true);
-                    MenuListener.createAMenu(p,msg);
+                    MenuListener.createAMenu(p, msg);
                     AsyncPlayerChatEvent.getHandlerList().unregister(this);
                     break;
             }

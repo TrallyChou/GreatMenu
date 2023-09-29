@@ -38,7 +38,7 @@ public class GreatMenu extends JavaPlugin {
         plugin = this;
         menuFolder = new File(this.getDataFolder().getPath() + "/menu");
         reLoadMenus();
-        log("插件已加载");
+        log("GreatMenu已加载");
         Bukkit.getPluginManager().registerEvents(new MenuListener(), this);
 
     }
@@ -75,13 +75,25 @@ public class GreatMenu extends JavaPlugin {
                             size = Integer.parseInt(args[1]);
                         } catch (NumberFormatException e) {
                             size = -1;
-                            p.sendMessage("§4请不要输入非法字符");
                         }
                         if (size % 9 == 0) {
-                            Inventory tmpInv = Bukkit.createInventory(() -> null, size, "Default");
+                            Inventory tmpInv = Bukkit.createInventory(null, size, "Default");
                             p.openInventory(tmpInv);
                         } else {
-                            p.sendMessage("§4无法打开一个这样的箱子");
+                            InventoryType type;
+                            try {
+                                type = InventoryType.valueOf(args[1]);
+                            } catch (IllegalArgumentException e) {
+                                type = null;
+                            }
+                            if (type != null) {
+                                Inventory tmpInv = Bukkit.createInventory(null, type, "Default");
+                                p.openInventory(tmpInv);
+                            } else {
+                                p.sendMessage("§4无法打开一个这样的箱子");
+                            }
+
+
                         }
 
                     }
@@ -120,6 +132,11 @@ public class GreatMenu extends JavaPlugin {
                 if (args[0].equals("list") && p.isOp()) {
                     p.sendMessage(menuFolder.list((dir, name) -> name.endsWith(".yml")));
                 }
+                if (args[0].equals("empty") && p.isOp()) {
+                    for (InventoryType tmp : InventoryType.values()) {
+                        p.sendMessage(tmp.name());
+                    }
+                }
 
             }
 
@@ -128,6 +145,8 @@ public class GreatMenu extends JavaPlugin {
                 p.sendMessage("§b/greatmenu open [菜单名]  打开菜单");
                 p.sendMessage("§b/greatmenu on/off        开启/关闭编辑模式");
                 p.sendMessage("§b/greatmenu empty [行数]   打开一个n行的匿名箱子");
+                p.sendMessage("§b/greatmenu empty [容器类型]  打开一个特定类型的匿名容器");
+                p.sendMessage("§b/greatmenu empty     查看容器类型列表");
                 p.sendMessage("§b/greatmenu list          列出所有菜单");
                 p.sendMessage("§b/greatmenu remove [菜单名] 删除菜单");
                 p.sendMessage("§a-----------------------");
@@ -140,7 +159,7 @@ public class GreatMenu extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        log("插件已卸载");
+        log("GreatMenu已停用");
     }
 
     static public void log(String s) {
