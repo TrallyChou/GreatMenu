@@ -100,21 +100,23 @@ public class GreatMenu extends JavaPlugin {
                 }
 
                 if (args[0].equals("remove")) {
-                    if (menus.containsKey(args[1])) {
-                        File tmp = new File(menuFolder, args[1] + ".yml");
-                        try {
-                            if (tmp.delete()) {
-                                p.sendMessage("§a删除成功");
-                                reLoadMenus();
-                            } else {
+                    if(p.isOp()){
+                        if (menus.containsKey(args[1])) {
+                            File tmp = new File(menuFolder, args[1] + ".yml");
+                            try {
+                                if (tmp.delete()) {
+                                    p.sendMessage("§a删除成功");
+                                    reLoadMenus();
+                                } else {
+                                    p.sendMessage("§a可能由于文件被打开等原因，删除失败");
+                                }
+                            } catch (Exception e) {
                                 p.sendMessage("§a可能由于文件被打开等原因，删除失败");
+                                throw new RuntimeException(e);
                             }
-                        } catch (Exception e) {
-                            p.sendMessage("§a可能由于文件被打开等原因，删除失败");
-                            throw new RuntimeException(e);
+                        } else {
+                            p.sendMessage("§4没有此菜单");
                         }
-                    } else {
-                        p.sendMessage("§4没有此菜单");
                     }
                 }
 
