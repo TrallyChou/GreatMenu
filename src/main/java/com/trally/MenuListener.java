@@ -102,8 +102,7 @@ public class MenuListener implements Listener {
 
             if (opState.getInt(p.getName() + ".state", 0) == 2) {
                 if (editingMenu.get(p.getName()) != null) {
-                    p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具",
-                            Arrays.asList("§a左键添加", "§4右键删除", "§4数字键删除指定行（1-9）")));
+                    p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除", "§4数字键删除指定行（1-9）")));
                     p.getInventory().setItem(5, getAItemNamedAndLored(Material.FISHING_ROD, "§r命令光标工具", Arrays.asList("§a左键复制", "§4右键粘贴", "§4Q键删除")));
                     p.getInventory().setItem(6, getAItemNamedAndLored(Material.NAME_TAG, "§r更改菜单标题"));
                     p.getInventory().setItem(7, new ItemStack(Material.AIR));
@@ -192,8 +191,7 @@ public class MenuListener implements Listener {
                         e.getClickedInventory().setItem(4, getAItemNamedAndLored(Material.BUCKET, "§r光标工具", Collections.singletonList("§a可以移动物品")));
 
                         if (e.getInventory().getHolder() == null && editingMenu.containsKey(p.getName())) {
-                            p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具",
-                                    Arrays.asList("§a左键添加", "§4右键删除", "§4数字键删除指定行（1-9）")));
+                            p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除", "§4数字键删除指定行（1-9）")));
                             e.getClickedInventory().setItem(5, getAItemNamedAndLored(Material.FISHING_ROD, "§r命令光标工具", Arrays.asList("§a左键复制", "§4右键粘贴", "§4Q键删除")));
                             e.getClickedInventory().setItem(6, getAItemNamedAndLored(Material.NAME_TAG, "§r更改菜单标题"));
                         } else {
@@ -343,51 +341,14 @@ public class MenuListener implements Listener {
                     e.setCancelled(true);
                     List<String> preExecuteCmds = GreatMenu.menusCommands.get(openAMenu.get(p.getName()))[e.getSlot()];
                     if (preExecuteCmds != null) {
-                        for (int i = 0; i < preExecuteCmds.size(); i++) {
-                            String tmpCmd = preExecuteCmds.get(i);
-                            tmpCmd = tmpCmd.replace("<Player>", p.getName());
-                            if (tmpCmd.startsWith("$c1")) {  //命令
-                                tmpCmd = tmpCmd.substring(3);
-                                p.chat("/" + tmpCmd);
-                                continue;
-                            }
 
-                            if (tmpCmd.startsWith("$c2")) {  //控制台命令
-                                tmpCmd = tmpCmd.substring(3);
-                                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), tmpCmd);
-                                continue;
-                            }
+                        new CommandExecute(preExecuteCmds, p, 0).runTask(GreatMenu.plugin);
 
-                            if (tmpCmd.equals("!c")) {  //关闭
-                                p.closeInventory();
-                                continue;
-                            }
-
-                            if (tmpCmd.startsWith("$c")) { //chat说话
-                                tmpCmd = tmpCmd.substring(2);
-                                p.chat(tmpCmd);
-                                continue;
-                            }
-
-                            if (tmpCmd.startsWith("$m")) {
-                                tmpCmd = tmpCmd.substring(2);
-                                p.sendMessage(tmpCmd);
-                                continue;
-                            }
-
-                            if (tmpCmd.startsWith("$t")) {
-                                tmpCmd = tmpCmd.substring(2);
-                                p.sendTitle(tmpCmd,"");
-                                continue;
-                            }
-
-
-                        }
                     }
-                } else {
-                    if (e.getClick().isShiftClick() || e.getClick() == ClickType.DOUBLE_CLICK || e.getClick() == ClickType.UNKNOWN)
-                        e.setCancelled(true);
                 }
+            } else {
+                if (e.getClick().isShiftClick() || e.getClick() == ClickType.DOUBLE_CLICK || e.getClick() == ClickType.UNKNOWN)
+                    e.setCancelled(true);
 
 
             }
@@ -506,6 +467,7 @@ public class MenuListener implements Listener {
             }
 
         } else {
+            c = c.trim();
             cmds.add(c);
         }
 
@@ -621,14 +583,14 @@ public class MenuListener implements Listener {
         }
         setYmlItems(invEditing.get(p.getName()).getContents(), inv);
         editingMenu.put(p.getName(), n);
-        Inventory tmpInv;
-        if (invEditing.get(p.getName()).getType() != InventoryType.CHEST) {
-
-            tmpInv = Bukkit.createInventory(null, InventoryType.valueOf(inv.getString("invType")), "Default");
-        } else {
-            tmpInv = Bukkit.createInventory(null, invEditing.get(p.getName()).getSize(), "Default");
-        }
-        tmpInv.setContents(invEditing.get(p.getName()).getContents());
+//        Inventory tmpInv;
+//        if (invEditing.get(p.getName()).getType() != InventoryType.CHEST) {
+//
+//            tmpInv = Bukkit.createInventory(null, InventoryType.valueOf(inv.getString("invType")), "Default");
+//        } else {
+//            tmpInv = Bukkit.createInventory(null, invEditing.get(p.getName()).getSize(), "Default");
+//        }
+//        tmpInv.setContents(invEditing.get(p.getName()).getContents());
         menuSave(p, invFile, inv);
         p.openInventory(GreatMenu.menus.get(n));
 
