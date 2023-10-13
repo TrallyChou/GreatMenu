@@ -9,6 +9,7 @@
 
 package com.trally;
 
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -17,6 +18,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -33,12 +35,18 @@ public class GreatMenu extends JavaPlugin {
     public static HashMap<String, Inventory> menus = new HashMap<>();
     public static HashMap<String, List<String>[]> menusCommands = new HashMap<>();
 
+    public static Economy econ = null;
+
     @Override
     public void onEnable() {
         plugin = this;
         menuFolder = new File(this.getDataFolder().getPath() + "/menu");
         reLoadMenus();
         log("GreatMenu已加载");
+        if(!setupEconomy()){
+            log("获取Vault失败，将不支持经济功能");
+        }
+
         Bukkit.getPluginManager().registerEvents(new MenuListener(), this);
 
     }
@@ -165,7 +173,7 @@ public class GreatMenu extends JavaPlugin {
     }
 
     static public void log(String s) {
-        Bukkit.getConsoleSender().sendMessage("§b" + s);
+        Bukkit.getConsoleSender().sendMessage("§b[GreatMenu]§a" + s);
     }
 
     static public void log(Object s) {
@@ -208,5 +216,21 @@ public class GreatMenu extends JavaPlugin {
         }
         return res;
     }
+
+    private boolean setupEconomy() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            return false;
+        }
+        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+        if (rsp == null) {
+            return false;
+        }
+        econ = rsp.getProvider();
+        return econ != null;
+    }
+
+
+
+
 
 }

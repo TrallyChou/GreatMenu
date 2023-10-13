@@ -9,6 +9,7 @@
 
 package com.trally;
 
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -30,8 +31,6 @@ public class CommandExecute extends BukkitRunnable {
     public void run() {
         for (int i = index; i < commands.size(); i++) {
             String tmpCmd = commands.get(i);
-
-            //需要写一下时间管理
 
             tmpCmd = tmpCmd.replaceAll("<Player>", p.getName())
                     .replaceAll("<World>", p.getWorld().getName());
@@ -82,6 +81,41 @@ public class CommandExecute extends BukkitRunnable {
                 continue;
             }
 
+            if (tmpCmd.startsWith("$eg")) {   //give
+                tmpCmd = tmpCmd.substring(3);
+                double e = Integer.parseInt(tmpCmd);
+                if (GreatMenu.econ != null) {
+                    EconomyResponse r = GreatMenu.econ.depositPlayer(p, e);
+                    if (!r.transactionSuccess()) {
+                        p.sendMessage("出现问题，请联系服务器管理员");
+                    }
+                } else {
+                    p.sendMessage("出现问题，请联系服务器管理员");
+                }
+
+                continue;
+            }
+
+            if (tmpCmd.startsWith("$et")) {  //take
+                tmpCmd = tmpCmd.substring(3);
+                double e = Integer.parseInt(tmpCmd);
+                if (GreatMenu.econ != null) {
+                    if (GreatMenu.econ.getBalance(p) >= e) {
+                        EconomyResponse r = GreatMenu.econ.withdrawPlayer(p, e);
+                        if (!r.transactionSuccess()) {
+                            p.sendMessage("出现问题，请联系服务器管理员");
+                        }
+                    } else {
+                        p.sendMessage("你没有这么多钱");
+                    }
+
+                } else {
+                    p.sendMessage("出现问题，请联系服务器管理员");
+                }
+
+                continue;
+            }
+
             if (tmpCmd.startsWith("$d")) { //delay延迟
                 tmpCmd = tmpCmd.substring(2);
                 int t = Integer.parseInt(tmpCmd);
@@ -89,6 +123,7 @@ public class CommandExecute extends BukkitRunnable {
                 new CommandExecute(commands, p, index + 1).runTaskLater(GreatMenu.plugin, t);
                 break;
             }
+
         }
     }
 }
