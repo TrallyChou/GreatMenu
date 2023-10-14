@@ -49,7 +49,7 @@ public class MenuListener implements Listener {
      * -1: 无
      * 0: 名称工具
      * 1: lore工具
-     * 2: 尚无
+     * 2: 执行工具
      * 3: 命令工具
      * 4: 光标工具
      * 5: 指令光标工具
@@ -66,9 +66,7 @@ public class MenuListener implements Listener {
             InventoryType t = e.getInventory().getType();
             if (e.getInventory().getHolder() != null || (t == InventoryType.ENCHANTING) || (t == InventoryType.ANVIL) || (t == InventoryType.ENDER_CHEST)) {
                 editingMenu.remove(p.getName());
-                if (opState.getInt(p.getName() + ".editingMode") == 3) {  //防止对普通箱子进行命令编辑
-                    opState.set(p.getName() + ".editingMode", 4);
-                }
+                opState.set(p.getName() + ".editingMode", 4);
                 if (opState.getInt(p.getName() + ".state") == 2) {
                     p.getInventory().setItem(3, new ItemStack(Material.AIR));
                     p.getInventory().setItem(6, new ItemStack(Material.AIR));
@@ -103,6 +101,7 @@ public class MenuListener implements Listener {
             if (opState.getInt(p.getName() + ".state", 0) == 2) {
                 if (editingMenu.get(p.getName()) != null) {
                     p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除", "§4数字键删除指定行（1-9）")));
+                    p.getInventory().setItem(2, getAItemNamedAndLored(Material.ARROW, "§r执行工具", Collections.singletonList("§a用来测试执行设置好的命令")));
                     p.getInventory().setItem(5, getAItemNamedAndLored(Material.FISHING_ROD, "§r命令光标工具", Arrays.asList("§a左键复制", "§4右键粘贴", "§4Q键删除")));
                     p.getInventory().setItem(6, getAItemNamedAndLored(Material.NAME_TAG, "§r更改菜单标题"));
                     p.getInventory().setItem(7, new ItemStack(Material.AIR));
@@ -139,9 +138,9 @@ public class MenuListener implements Listener {
             if (editingMenu.get(p.getName()) != null && e.getInventory().getHolder() == null) {
                 File invFile = new File(GreatMenu.menuFolder, editingMenu.get(p.getName()) + ".yml");
                 YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
-                //inv.set("size", e.getInventory().getSize());
+                //inv.set("size", e.getInventory().getSize());    不修改，则不设置。修改立刻设置。
                 setYmlItems(e.getInventory().getContents(), inv);
-                //inv.set("title", e.getInventory().getName());
+                //inv.set("title", e.getInventory().getName());   不修改，则不设置。修改立刻设置。
                 menuSave(p, invFile, inv);
                 //管箱子意味着保存，保存意味着重载，重载意味着invEditing中存的箱子仍然是原来的，而不是重载后重新创建的，导致bug。所以，执行下一条语句
                 invEditing.put(p.getName(), GreatMenu.menus.get(editingMenu.get(p.getName())));
@@ -192,6 +191,7 @@ public class MenuListener implements Listener {
 
                         if (e.getInventory().getHolder() == null && editingMenu.containsKey(p.getName())) {
                             p.getInventory().setItem(3, getAItemNamedAndLored(Material.COMMAND, "§r命令工具", Arrays.asList("§a左键添加", "§4右键删除", "§4数字键删除指定行（1-9）")));
+                            p.getInventory().setItem(2, getAItemNamedAndLored(Material.ARROW, "§r执行工具", Collections.singletonList("§a用来测试执行设置好的命令")));
                             e.getClickedInventory().setItem(5, getAItemNamedAndLored(Material.FISHING_ROD, "§r命令光标工具", Arrays.asList("§a左键复制", "§4右键粘贴", "§4Q键删除")));
                             e.getClickedInventory().setItem(6, getAItemNamedAndLored(Material.NAME_TAG, "§r更改菜单标题"));
                         } else {
@@ -321,11 +321,14 @@ public class MenuListener implements Listener {
                         } else if (e.getClick() == ClickType.DROP) {
                             removeAllCmds(p);
                         }
-
-
                     }
 
-
+                    if (opState.getInt(p.getName() + ".editingMode") == 2) {
+                        List<String> preExecuteCmds = GreatMenu.menusCommands.get(openAMenu.get(p.getName()))[e.getSlot()];
+                        if (preExecuteCmds != null) {
+                            new CommandExecute(preExecuteCmds, p, 0).runTask(GreatMenu.plugin);
+                        }
+                    }
                 }
 
 
@@ -624,17 +627,20 @@ public class MenuListener implements Listener {
             String nowMenu = editingMenu.get(p.getName());
             Inventory tmpMenu = GreatMenu.menus.get(nowMenu);
             List<String>[] cmdListsOfThisMenu = GreatMenu.menusCommands.get(nowMenu);
+            //注: 禁止修改cmdListsOfThisMenu
+
             for (int i = 0; i < cmdListsOfThisMenu.length; i++) {
+                List<String> showCmds = new ArrayList<>();
                 if (cmdListsOfThisMenu[i] != null && !cmdListsOfThisMenu[i].isEmpty()) {
                     if (tmpMenu.getItem(i) == null) {
                         tmpMenu.setItem(i, changeAItem(new ItemStack(Material.COMMAND), "§4这个位置没有方块，但是有命令§g§m§c"));
                     }
 
                     for (int j = 0; j < cmdListsOfThisMenu[i].size(); j++) {
-                        cmdListsOfThisMenu[i].set(j, "§a" + (j + 1) + " - §e" + cmdListsOfThisMenu[i].get(j));
+                        showCmds.add(j, "§a" + (j + 1) + " - §e" + cmdListsOfThisMenu[i].get(j));
                     }
 
-                    tmpMenu.setItem(i, addAItemLore(addAItemLore(tmpMenu.getItem(i), "§c§l运行："), cmdListsOfThisMenu[i]));
+                    tmpMenu.setItem(i, addAItemLore(addAItemLore(tmpMenu.getItem(i), "§c§l运行："), showCmds));
                 }
             }
             opState.set(p.getName() + ".showCmds", true);

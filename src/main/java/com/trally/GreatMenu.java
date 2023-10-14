@@ -34,7 +34,6 @@ public class GreatMenu extends JavaPlugin {
     static public GreatMenu plugin;
     public static HashMap<String, Inventory> menus = new HashMap<>();
     public static HashMap<String, List<String>[]> menusCommands = new HashMap<>();
-
     public static Economy econ = null;
 
     @Override
