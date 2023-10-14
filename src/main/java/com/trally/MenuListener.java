@@ -304,6 +304,13 @@ public class MenuListener implements Listener {
                     if (opState.getInt(p.getName() + ".editingMode") == 3) {
                         if (e.getClick().isLeftClick()) {
                             p.sendTitle("请输入要增加的执行", "可以使用 %行数 为前缀来添加到指定行");
+                            p.sendMessage("§a-----------------------------------------------");
+                            p.sendMessage("§3$c1 玩家命令    §2$c2 控制台命令  §1$c3op命令");
+                            p.sendMessage("§4$c  玩家说话    §5$m  显示消息    §6$t显示标题");
+                            p.sendMessage("§a$eg 给玩家钱    §b$et 扣玩家钱    §6!c关闭菜单");
+                            p.sendMessage("§a$d 延迟执行(tick)");
+
+
                             Bukkit.getPluginManager().registerEvents(new CMListener(), GreatMenu.plugin);
                             Bukkit.getScheduler().runTask(GreatMenu.plugin, p::closeInventory);
                         } else if (e.getClick().isRightClick()) {
@@ -470,7 +477,7 @@ public class MenuListener implements Listener {
             }
 
         } else {
-            c = c.trim();
+            //这里去除首尾空
             cmds.add(c);
         }
 
@@ -577,8 +584,8 @@ public class MenuListener implements Listener {
 
     //这里需要实现其它类型的箱子
     static public void createAMenu(Player p, String n) {
-        YamlConfiguration inv = new YamlConfiguration();
         File invFile = new File(GreatMenu.menuFolder, n + ".yml");
+        YamlConfiguration inv = YamlConfiguration.loadConfiguration(invFile);
         inv.set("size", invEditing.get(p.getName()).getSize());
         inv.set("title", "Default");
         if (invEditing.get(p.getName()).getType() != InventoryType.CHEST) {
@@ -586,6 +593,7 @@ public class MenuListener implements Listener {
         }
         setYmlItems(invEditing.get(p.getName()).getContents(), inv);
         editingMenu.put(p.getName(), n);
+        openAMenu.put(p.getName(), n);
 //        Inventory tmpInv;
 //        if (invEditing.get(p.getName()).getType() != InventoryType.CHEST) {
 //

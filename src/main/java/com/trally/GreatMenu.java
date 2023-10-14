@@ -37,12 +37,16 @@ public class GreatMenu extends JavaPlugin {
     public static Economy econ = null;
 
     @Override
-    public void onEnable() {
+    public void onLoad() {
         plugin = this;
         menuFolder = new File(this.getDataFolder().getPath() + "/menu");
         reLoadMenus();
+    }
+
+    @Override
+    public void onEnable() {
         log("GreatMenu已加载");
-        if(!setupEconomy()){
+        if (!setupEconomy()) {
             log("获取Vault失败，将不支持经济功能");
         }
 
@@ -107,7 +111,7 @@ public class GreatMenu extends JavaPlugin {
                 }
 
                 if (args[0].equals("remove")) {
-                    if(p.isOp()){
+                    if (p.isOp()) {
                         if (menus.containsKey(args[1])) {
                             File tmp = new File(menuFolder, args[1] + ".yml");
                             try {
@@ -130,22 +134,31 @@ public class GreatMenu extends JavaPlugin {
             }
 
             if (args.length == 1) {
-                if (args[0].equals("off") && p.isOp()) {
-                    MenuListener.opState.set(p.getName() + ".on", false);
-                    p.sendMessage("§b关闭编辑模式");
-                }
-                if (args[0].equals("on") && p.isOp()) {
-                    MenuListener.opState.set(p.getName() + ".on", true);
-                    p.sendMessage("§a开启编辑模式");
-                }
-                if (args[0].equals("list") && p.isOp()) {
-                    p.sendMessage(menuFolder.list((dir, name) -> name.endsWith(".yml")));
-                }
-                if (args[0].equals("empty") && p.isOp()) {
-                    for (InventoryType tmp : InventoryType.values()) {
-                        p.sendMessage(tmp.name());
+                if (p.isOp()) {
+                    if (args[0].equals("off")) {
+                        MenuListener.opState.set(p.getName() + ".on", false);
+                        p.sendMessage("§b关闭编辑模式");
                     }
+                    if (args[0].equals("on")) {
+                        MenuListener.opState.set(p.getName() + ".on", true);
+                        p.sendMessage("§a开启编辑模式");
+                    }
+                    if (args[0].equals("list")) {
+                        p.sendMessage(menuFolder.list((dir, name) -> name.endsWith(".yml")));
+                    }
+                    if (args[0].equals("empty")) {
+                        for (InventoryType tmp : InventoryType.values()) {
+                            p.sendMessage(tmp.name());
+                        }
+                    }
+                    if (args[0].equals("reload")) {
+                        p.sendMessage("正在重载");
+                        reLoadMenus();
+                        p.sendMessage("已重载。");
+                    }
+
                 }
+
 
             }
 
@@ -158,10 +171,12 @@ public class GreatMenu extends JavaPlugin {
                 p.sendMessage("§b/greatmenu empty     查看容器类型列表");
                 p.sendMessage("§b/greatmenu list          列出所有菜单");
                 p.sendMessage("§b/greatmenu remove [菜单名] 删除菜单");
+                p.sendMessage("§b/greatmenu reload  重载插件");
                 p.sendMessage("§a-----------------------");
             }
 
         }
+
 
         return true;
     }
@@ -227,9 +242,6 @@ public class GreatMenu extends JavaPlugin {
         econ = rsp.getProvider();
         return econ != null;
     }
-
-
-
 
 
 }

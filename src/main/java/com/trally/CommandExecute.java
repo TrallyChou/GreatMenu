@@ -32,8 +32,7 @@ public class CommandExecute extends BukkitRunnable {
         for (int i = index; i < commands.size(); i++) {
             String tmpCmd = commands.get(i);
 
-            tmpCmd = tmpCmd.replaceAll("<Player>", p.getName())
-                    .replaceAll("<World>", p.getWorld().getName());
+            tmpCmd = tmpCmd.replace("<Player>", p.getName()).replace("<World>", p.getWorld().getName()).replace("<Money>", String.valueOf(GreatMenu.econ.getBalance(p)));
             if (tmpCmd.startsWith("$c1")) {  //命令
                 tmpCmd = tmpCmd.substring(3);
                 String finalTmpCmd = tmpCmd;
@@ -47,7 +46,7 @@ public class CommandExecute extends BukkitRunnable {
                 continue;
             }
 
-            if (tmpCmd.startsWith("$c3")) {
+            if (tmpCmd.startsWith("$c3")) {  //op命令
                 tmpCmd = tmpCmd.substring(3);
                 boolean isOp = p.isOp();
                 p.setOp(true);
@@ -107,6 +106,7 @@ public class CommandExecute extends BukkitRunnable {
                         }
                     } else {
                         p.sendMessage("你没有这么多钱");
+                        break;
                     }
 
                 } else {
@@ -119,8 +119,7 @@ public class CommandExecute extends BukkitRunnable {
             if (tmpCmd.startsWith("$d")) { //delay延迟
                 tmpCmd = tmpCmd.substring(2);
                 int t = Integer.parseInt(tmpCmd);
-                this.cancel();
-                new CommandExecute(commands, p, index + 1).runTaskLater(GreatMenu.plugin, t);
+                new CommandExecute(commands, p, i + 1).runTaskLater(GreatMenu.plugin, t);
                 break;
             }
 
