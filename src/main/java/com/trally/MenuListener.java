@@ -70,6 +70,8 @@ public class MenuListener implements Listener {
                 if (opState.getInt(p.getName() + ".state") == 2) {
                     p.getInventory().setItem(3, new ItemStack(Material.AIR));
                     p.getInventory().setItem(6, new ItemStack(Material.AIR));
+                    p.getInventory().setItem(2, new ItemStack(Material.AIR));
+                    p.getInventory().setItem(5, new ItemStack(Material.AIR));
                     p.getInventory().setItem(7, getAItemNamedAndLored(Material.LEVER, "§r创建为菜单"));
                 }
 
@@ -485,7 +487,9 @@ public class MenuListener implements Listener {
         menuSave(p, invFile, inv);
         invEditing.put(p.getName(), GreatMenu.menus.get(n));
 //        GreatMenu.reLoadMenus();
+
         p.openInventory(invEditing.get(p.getName()));
+
         editingMenu.put(p.getName(), n);
     }
 

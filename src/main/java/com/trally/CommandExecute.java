@@ -32,7 +32,10 @@ public class CommandExecute extends BukkitRunnable {
         for (int i = index; i < commands.size(); i++) {
             String tmpCmd = commands.get(i);
 
-            tmpCmd = tmpCmd.replace("<Player>", p.getName()).replace("<World>", p.getWorld().getName()).replace("<Money>", String.valueOf(GreatMenu.econ.getBalance(p)));
+            tmpCmd = tmpCmd.replace("<Player>", p.getName()).replace("<World>", p.getWorld().getName());
+            if (GreatMenu.econ != null) {
+                tmpCmd = tmpCmd.replace("<Money>", String.valueOf(GreatMenu.econ.getBalance(p)));
+            }
             if (tmpCmd.startsWith("$c1")) {  //命令
                 tmpCmd = tmpCmd.substring(3);
                 String finalTmpCmd = tmpCmd;

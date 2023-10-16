@@ -40,15 +40,16 @@ public class GreatMenu extends JavaPlugin {
     public void onLoad() {
         plugin = this;
         menuFolder = new File(this.getDataFolder().getPath() + "/menu");
+        if (!setupEconomy()) {
+            log("获取Vault失败，将不支持经济功能");
+        }
         reLoadMenus();
     }
 
     @Override
     public void onEnable() {
         log("GreatMenu已加载");
-        if (!setupEconomy()) {
-            log("获取Vault失败，将不支持经济功能");
-        }
+
 
         Bukkit.getPluginManager().registerEvents(new MenuListener(), this);
 
