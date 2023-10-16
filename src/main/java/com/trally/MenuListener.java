@@ -53,8 +53,8 @@ public class MenuListener implements Listener {
      * 3: 命令工具
      * 4: 光标工具
      * 5: 指令光标工具
-     * 6: 更改容器名
-     * 7: 设置菜单id
+     * 6: 更改菜单标题
+     * 7: 创建为菜单
      */
 
     @EventHandler
@@ -66,7 +66,10 @@ public class MenuListener implements Listener {
             InventoryType t = e.getInventory().getType();
             if (e.getInventory().getHolder() != null || (t == InventoryType.ENCHANTING) || (t == InventoryType.ANVIL) || (t == InventoryType.ENDER_CHEST)) {
                 editingMenu.remove(p.getName());
-                opState.set(p.getName() + ".editingMode", 4);
+
+                if (Arrays.asList(2, 3, 5, 7).contains(opState.getInt(p.getName() + ".editingMode"))) {
+                    opState.set(p.getName() + ".editingMode", 4);
+                }
                 if (opState.getInt(p.getName() + ".state") == 2) {
                     p.getInventory().setItem(3, new ItemStack(Material.AIR));
                     p.getInventory().setItem(6, new ItemStack(Material.AIR));
